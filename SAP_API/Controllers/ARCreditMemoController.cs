@@ -26,5 +26,12 @@ namespace SAP_API.Controllers
             var mess = await _sapService.CreateCreditInvoiceWithPaymentAsync(ar);
             return Ok(mess);
         }
+        [HttpGet("check")]
+        [AllowAnonymous]
+        public async Task<IActionResult> addARCreditMemo1(string invoice)
+        {
+            var a =  _sapService.GetDocEntryARInvoiceAsync(invoice);
+            return Ok();
+        }
     }
 }

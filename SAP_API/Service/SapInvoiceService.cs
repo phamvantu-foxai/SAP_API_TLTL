@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using SAP_API.Data;
 using SAP_API.Model;
 using SAPbobsCOM;
 using System;
@@ -26,7 +27,7 @@ namespace SAP_API.Service
         private readonly SapSessionManager _sessionManager;
         private readonly APISetting _api;
         private readonly Cookies cookies = new Cookies();
-        public SapInvoiceService(SapDiApiHelper sapHelper, IOptions<APISetting> api, SapSessionManager sessionManager)
+        public SapInvoiceService(SapDiApiHelper sapHelper, IOptions<APISetting> api, SapSessionManager sessionManager, AppDbContext db)
         {
             _sapHelper = sapHelper;
             _httpClient = new HttpClient();
@@ -121,7 +122,100 @@ namespace SAP_API.Service
 
             return result;
         }
+        public async Task<int> GetDocEntryARInvoiceAsync(string OriginalInvoiceCode)
+        {
+            if (cookies == null || cookies.SessionTime < DateTime.Now)
+            {
+                var (ckies, check, Mes) = await _sessionManager.LoginAsync();
+                if (check)
+                {
+                    cookies.SessionTime = ckies.SessionTime;
+                    cookies.B1SESSION = ckies.B1SESSION;
+                    cookies.ROUTEID = ckies.ROUTEID;
+                }
+            }
+            var _httpWebRequests = (HttpWebRequest)WebRequest.Create($"{_api.BaseUrl}/Invoices?$select=DocEntry&$filter=U_POS eq '{OriginalInvoiceCode}'");
+            _httpWebRequests.ContentType = "application/json";
+            _httpWebRequests.Method = "GET";
+            _httpWebRequests.KeepAlive = true;
+            _httpWebRequests.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
+            _httpWebRequests.Headers.Add("B1S-WCFCompatible", "true");
+            _httpWebRequests.Headers.Add("B1S-MetadataWithoutSession", "true");
+            _httpWebRequests.Accept = "*/*";
+            _httpWebRequests.ServicePoint.Expect100Continue = false;
+            _httpWebRequests.Headers.Add("Accept-Encoding", "gzip, deflate, br");
+            _httpWebRequests.Headers.Add("Cookie", cookies.B1SESSION + cookies.ROUTEID);
+            _httpWebRequests.AutomaticDecompression = DecompressionMethods.GZip;
+            var httpResponse = (HttpWebResponse)_httpWebRequests.GetResponse();
+            if (httpResponse.StatusCode == HttpStatusCode.OK)
+            {
+                using (var reader = new StreamReader(httpResponse.GetResponseStream()))
+                {
+                    var json = reader.ReadToEnd();
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
 
+                    if (root.TryGetProperty("value", out var valueProp) && valueProp.ValueKind == JsonValueKind.Array)
+                    {
+                        var first = valueProp.EnumerateArray().FirstOrDefault();
+                        if (first.ValueKind != JsonValueKind.Undefined && first.TryGetProperty("DocEntry", out var docEntryProp))
+                            return int.Parse(docEntryProp.ToString());
+                        else
+                            return 0;   
+                    }
+                }
+                return 0;
+            }
+            else
+                return 0;
+        }
+        public async Task<int> GetARInvoiceAsync(int DocEntry)
+        {
+            if (cookies == null || cookies.SessionTime < DateTime.Now)
+            {
+                var (ckies, check, Mes) = await _sessionManager.LoginAsync();
+                if (check)
+                {
+                    cookies.SessionTime = ckies.SessionTime;
+                    cookies.B1SESSION = ckies.B1SESSION;
+                    cookies.ROUTEID = ckies.ROUTEID;
+                }
+            }
+            var _httpWebRequests = (HttpWebRequest)WebRequest.Create($"{_api.BaseUrl}/Invoices("+ DocEntry + ")");
+            _httpWebRequests.ContentType = "application/json";
+            _httpWebRequests.Method = "GET";
+            _httpWebRequests.KeepAlive = true;
+            _httpWebRequests.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
+            _httpWebRequests.Headers.Add("B1S-WCFCompatible", "true");
+            _httpWebRequests.Headers.Add("B1S-MetadataWithoutSession", "true");
+            _httpWebRequests.Accept = "*/*";
+            _httpWebRequests.ServicePoint.Expect100Continue = false;
+            _httpWebRequests.Headers.Add("Accept-Encoding", "gzip, deflate, br");
+            _httpWebRequests.Headers.Add("Cookie", cookies.B1SESSION + cookies.ROUTEID);
+            _httpWebRequests.AutomaticDecompression = DecompressionMethods.GZip;
+            var httpResponse = (HttpWebResponse)_httpWebRequests.GetResponse();
+            if (httpResponse.StatusCode == HttpStatusCode.OK)
+            {
+                using (var reader = new StreamReader(httpResponse.GetResponseStream()))
+                {
+                    var json = reader.ReadToEnd();
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+
+                    if (root.TryGetProperty("value", out var valueProp) && valueProp.ValueKind == JsonValueKind.Array)
+                    {
+                        var first = valueProp.EnumerateArray().FirstOrDefault();
+                        if (first.ValueKind != JsonValueKind.Undefined && first.TryGetProperty("DocEntry", out var docEntryProp))
+                            return int.Parse(docEntryProp.ToString());
+                        else
+                            return 0;
+                    }
+                }
+                return 0;
+            }
+            else
+                return 0;
+        }
         public async Task<Respond> CreateCreditInvoiceWithPaymentAsync(ARInvoice ar)
         {
             Respond respond = new Respond();
@@ -135,7 +229,7 @@ namespace SAP_API.Service
                     cookies.ROUTEID = ckies.ROUTEID;
                 }
             }
-
+            
             var _httpWebRequests = (HttpWebRequest)WebRequest.Create($"{_api.BaseUrl}/CreditNotes?$select=DocEntry&$filter=U_POS eq '{ar.InvoiceCode}'");
             _httpWebRequests.ContentType = "application/json";
             _httpWebRequests.Method = "GET";
@@ -174,6 +268,7 @@ namespace SAP_API.Service
                 }
 
             }
+
             var arInvoice = SapDiApiHelper.ToARCreditInvoiceRequest(ar, "");
             string invoiceJson = JsonSerializer.Serialize(arInvoice);
             double cashSum = ar.ARInvoice_Lines.Sum(e => (e.Quantity * e.Price) + (((e.Quantity * e.Price) * (e.VatPercent ?? 0) / 100)));
@@ -476,7 +571,7 @@ namespace SAP_API.Service
                 DocDate = src.DocDate,
                 DocDueDate = src.DocDate,
                 TaxDate = src.DocDate,
-                Comments = "Tạo hóa đơn bán hàng + phiếu thu tiền mặt tại POS",
+                Comments = "Tạo hóa đơn bán hàng tại POS",
                 U_SoSeries = src.MaSoHD,
                 U_KyHieuHD = src.KyHieuHD,
                 U_SoChungTu = "POS" + src.InvoiceCode,
@@ -510,7 +605,7 @@ namespace SAP_API.Service
                 DocDate = src.DocDate,
                 DocDueDate = src.DocDate,
                 TaxDate = src.DocDate,
-                Comments = "Tạo Điều chỉnh hóa đơn bán hàng + phiếu chi tiền mặt tại POS",
+                Comments = "Tạo Điều chỉnh hóa đơn bán hàng tại POS",
                 U_SoSeries = src.MaSoHD,
                 U_KyHieuHD = src.KyHieuHD,
                 U_LoaiHoaDonBan = "HDBH01",
@@ -521,6 +616,9 @@ namespace SAP_API.Service
                 U_PBG = src.OriginalInvoiceCode ?? "",
                 DocumentLines = src.ARInvoice_Lines.Select(line => new ARInvoiceLine
                 {
+                    BaseType = line.BaseType,
+                    BaseEntry = line.BaseEntry,
+                    BaseLine = line.BaseLine,
                     ItemCode = line.ItemCode,
                     Quantity = line.Quantity,
                     UnitPrice = line.Price,

@@ -99,7 +99,9 @@ namespace SAP_API.Service
                 }
                 else
                 {
+                    WriteLog("thành công 2");
                     _db.Database.ExecuteSqlRaw("update OWTR set U_MaPhieuBaoTri = {0} where DocEntry = {1}", item.ToString(), item);
+                    WriteLog("thành công 2");
                 }
                 ls = new List<TransferView>();
             } 
@@ -123,7 +125,9 @@ namespace SAP_API.Service
                 }
                 else
                 {
+                    WriteLog("thành công 1");
                     _db.Database.ExecuteSqlRaw("update OIGE set U_POS = {0} where DocEntry = {1}", item.ToString(), item);
+                    WriteLog("thành công 1");
                 }
                 ls = new List<GoodIssueView>();
             }
@@ -133,9 +137,9 @@ namespace SAP_API.Service
         {
             var items = await _db.GoodReceiptView.ToListAsync();
             List<GoodReceiptView> ls = new List<GoodReceiptView>();
-            foreach (var item in items.Select(e => e.Stt).Distinct())
+            foreach (var item in items.Select(e =>  e.mS_DH_NHAP_PT).Distinct())
             {
-                ls.AddRange(items.Where(e => e.Stt == item).ToList());
+                ls.AddRange(items.Where(e => e.mS_DH_NHAP_PT == item).ToList());
                 var json = JsonConvert.SerializeObject(ls, Formatting.Indented);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await _httpClient.PostAsync(_apiAPIEcomaint.BaseUrl + "insert-multi_nhap_phu_tung", content);
@@ -147,7 +151,9 @@ namespace SAP_API.Service
                 }
                 else
                 {
-                    _db.Database.ExecuteSqlRaw("update OIGN set U_POS = {0} where DocEntry = {1}", item.ToString(), item);
+                    WriteLog("thành công");
+                    _db.Database.ExecuteSqlRaw("update OIGN set U_POS = {0} where DocEntry = {1}", item, item);
+                    WriteLog("thành công");
                 }
                 ls = new List<GoodReceiptView>();
             }

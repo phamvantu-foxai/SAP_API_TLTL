@@ -20,6 +20,9 @@ namespace SAP_API.Model
 
     public class InvoiceLineDto
     {
+        public int BaseType { get; set; } = -1;
+        public int? BaseEntry { get; set; } = null;
+        public int? BaseLine { get; set; } = null;
         public string ItemCode { get; set; }          // Mã hàng
         public double Quantity { get; set; }          // Tổng số lượng
         public double Price { get; set; }             // Đơn giá
@@ -42,6 +45,9 @@ namespace SAP_API.Model
 
     public class ARInvoiceLine
     {
+        public int BaseType { get; set; } = -1;
+        public int? BaseEntry { get; set; } = null;
+        public int? BaseLine { get; set; } = null;
         public string ItemCode { get; set; }
         public double Quantity { get; set; }
         public double UnitPrice { get; set; }

@@ -48,5 +48,6 @@ namespace SAP_API.Controllers
             await _oitmService.GetGoodReceipt();
             return Ok();
         }
+        
     }
 }

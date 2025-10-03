@@ -1,4 +1,5 @@
 ﻿using Quartz;
+using System.IO;
 
 namespace SAP_API.Service
 {
@@ -92,6 +93,9 @@ namespace SAP_API.Service
 
         public async Task Execute(IJobExecutionContext context)
         {
+            Directory.CreateDirectory("Logs");
+            string path = "Logs/error.log";
+            File.AppendAllText(path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - Bắt đầu JobGoodReceipt {Environment.NewLine}");
             _logger.LogInformation($"[JobGoodReceipt] Running at {DateTime.Now}");
             if (checkBP)
                 checkBP = await _itemService.GetGoodReceipt();
