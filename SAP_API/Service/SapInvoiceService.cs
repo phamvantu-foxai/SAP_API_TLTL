@@ -92,7 +92,6 @@ namespace SAP_API.Service
             
             var arInvoice = SapDiApiHelper.ToARInvoiceRequest(ar, "");
             string invoiceJson = JsonSerializer.Serialize(arInvoice);
-            double cashSum = ar.ARInvoice_Lines.Sum(e =>(e.Quantity * e.Price) +( ((e.Quantity * e.Price) * (e.VatPercent ?? 0) / 100)));
             
             var result = new Respond();
 
@@ -122,7 +121,7 @@ namespace SAP_API.Service
 
             return result;
         }
-        public async Task<int> GetDocEntryARInvoiceAsync(string OriginalInvoiceCode)
+        public async Task<(ARInvoiceCreditRequest, int)> GetDocEntryARInvoiceAsync(string OriginalInvoiceCode)
         {
             if (cookies == null || cookies.SessionTime < DateTime.Now)
             {
@@ -159,17 +158,22 @@ namespace SAP_API.Service
                     {
                         var first = valueProp.EnumerateArray().FirstOrDefault();
                         if (first.ValueKind != JsonValueKind.Undefined && first.TryGetProperty("DocEntry", out var docEntryProp))
-                            return int.Parse(docEntryProp.ToString());
+                        {
+                            int DocEntry = int.Parse(docEntryProp.ToString());
+                            var result = GetARInvoiceAsync(DocEntry);
+                            return (result.Result, DocEntry);
+                        }    
+                            
                         else
-                            return 0;   
+                            return (null,0);   
                     }
                 }
-                return 0;
+                return (null, 0);
             }
             else
-                return 0;
+                return (null, 0);
         }
-        public async Task<int> GetARInvoiceAsync(int DocEntry)
+        public async Task<ARInvoiceCreditRequest> GetARInvoiceAsync(int DocEntry)
         {
             if (cookies == null || cookies.SessionTime < DateTime.Now)
             {
@@ -193,28 +197,27 @@ namespace SAP_API.Service
             _httpWebRequests.Headers.Add("Accept-Encoding", "gzip, deflate, br");
             _httpWebRequests.Headers.Add("Cookie", cookies.B1SESSION + cookies.ROUTEID);
             _httpWebRequests.AutomaticDecompression = DecompressionMethods.GZip;
-            var httpResponse = (HttpWebResponse)_httpWebRequests.GetResponse();
-            if (httpResponse.StatusCode == HttpStatusCode.OK)
+            try
             {
-                using (var reader = new StreamReader(httpResponse.GetResponseStream()))
+                var httpResponse = (HttpWebResponse)_httpWebRequests.GetResponse();
+                if (httpResponse.StatusCode == HttpStatusCode.OK)
                 {
-                    var json = reader.ReadToEnd();
-                    using var doc = JsonDocument.Parse(json);
-                    var root = doc.RootElement;
-
-                    if (root.TryGetProperty("value", out var valueProp) && valueProp.ValueKind == JsonValueKind.Array)
+                    using (var reader = new StreamReader(httpResponse.GetResponseStream()))
                     {
-                        var first = valueProp.EnumerateArray().FirstOrDefault();
-                        if (first.ValueKind != JsonValueKind.Undefined && first.TryGetProperty("DocEntry", out var docEntryProp))
-                            return int.Parse(docEntryProp.ToString());
-                        else
-                            return 0;
+                        var json = reader.ReadToEnd();
+                        var options = new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        };
+                        ARInvoiceCreditRequest invoice = JsonSerializer.Deserialize<ARInvoiceCreditRequest>(json, options);
+                        return invoice;
                     }
                 }
-                return 0;
+                else
+                    return null;
             }
-            else
-                return 0;
+            catch { return null; }
+            
         }
         public async Task<Respond> CreateCreditInvoiceWithPaymentAsync(ARInvoice ar)
         {
@@ -268,26 +271,42 @@ namespace SAP_API.Service
                 }
 
             }
-
-            var arInvoice = SapDiApiHelper.ToARCreditInvoiceRequest(ar, "");
+            var (arInvoice, DocEntry) = await GetDocEntryARInvoiceAsync(ar.OriginalInvoiceCode);
+            var creditMemo = new
+            {
+                DocDate = ar.DocDate,
+                DocDueDate = ar.DocDate,
+                CardCode = arInvoice.CardCode,
+                Comments = $"Hóa đơn điều chỉnh từ Hóa đơn "+DocEntry+" - POS",
+                DocumentLines = arInvoice.DocumentLines.Select((line, index) => new
+                {
+                    BaseType = 13,
+                    BaseEntry = DocEntry,
+                    BaseLine = line.LineNum,
+                    Quantity = ar.ARInvoice_Lines.FirstOrDefault(e=>e.ItemCode == line.ItemCode)?.Quantity ?? 0,
+                    BatchNumbers = line.BatchNumbers.Select(b => new
+                    {
+                        BatchNumber = ar.ARInvoice_Lines.FirstOrDefault(e => e.ItemCode == line.ItemCode)?.Batches?.FirstOrDefault(e=>e.BatchNumber ==b.BatchNumber)?.BatchNumber ?? "",
+                        Quantity = ar.ARInvoice_Lines.FirstOrDefault(e => e.ItemCode == line.ItemCode)?.Batches?.FirstOrDefault(e => e.BatchNumber == b.BatchNumber)?.Quantity ?? 0
+                    }).ToList()
+                }).ToList()
+            };
             string invoiceJson = JsonSerializer.Serialize(arInvoice);
-            double cashSum = ar.ARInvoice_Lines.Sum(e => (e.Quantity * e.Price) + (((e.Quantity * e.Price) * (e.VatPercent ?? 0) / 100)));
-
             var result = new Respond();
 
             try
             {
-                var (DocEntry, check) = await CreateCreditInvoiceAsync(arInvoice);
+                var (Entry, check) = await CreateCreditInvoiceAsync(arInvoice);
                 if (check)
                 {
-                    result.DocEntry = DocEntry;
+                    result.DocEntry = Entry;
                     result.Success = true;
                     result.InvoicePos = ar.InvoiceCode;
                 }
                 else
                 {
                     result.Success = false;
-                    result.Error = DocEntry;
+                    result.Error = Entry;
                     result.InvoicePos = ar.InvoiceCode;
                     return result;
                 }
@@ -394,7 +413,7 @@ namespace SAP_API.Service
 
             }
         }
-        public async Task<(string, bool)> CreateCreditInvoiceAsync(ARInvoiceRequest rq)
+        public async Task<(string, bool)> CreateCreditInvoiceAsync(ARInvoiceCreditRequest rq)
         {
             HttpWebRequest httpWebRequests = (HttpWebRequest)WebRequest.Create($"{_api.BaseUrl}" + "/CreditNotes");
             httpWebRequests.ContentType = "application/json";
@@ -599,6 +618,7 @@ namespace SAP_API.Service
 
         public static ARInvoiceRequest ToARCreditInvoiceRequest(ARInvoice src, string warehouseCode)
         {
+
             var req = new ARInvoiceRequest
             {
                 CardCode = src.CardCode,

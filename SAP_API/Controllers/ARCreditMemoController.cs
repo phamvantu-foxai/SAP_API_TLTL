@@ -33,5 +33,12 @@ namespace SAP_API.Controllers
             var a =  _sapService.GetDocEntryARInvoiceAsync(invoice);
             return Ok();
         }
+        [HttpGet("checkInvoice")]
+        [AllowAnonymous]
+        public async Task<IActionResult> addARCreditInvoice()
+        {
+            var a = _sapService.GetARInvoiceAsync(36277);
+            return Ok();
+        }
     }
 }
