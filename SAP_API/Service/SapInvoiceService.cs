@@ -121,7 +121,7 @@ namespace SAP_API.Service
 
             return result;
         }
-        public async Task<(ARInvoiceCreditRequest, int)> GetDocEntryARInvoiceAsync(string OriginalInvoiceCode)
+        public async Task<(ARInvoiceCreditRequestDTO, int)> GetDocEntryARInvoiceAsync(string OriginalInvoiceCode)
         {
             if (cookies == null || cookies.SessionTime < DateTime.Now)
             {
@@ -173,7 +173,7 @@ namespace SAP_API.Service
             else
                 return (null, 0);
         }
-        public async Task<ARInvoiceCreditRequest> GetARInvoiceAsync(int DocEntry)
+        public async Task<ARInvoiceCreditRequestDTO> GetARInvoiceAsync(int DocEntry)
         {
             if (cookies == null || cookies.SessionTime < DateTime.Now)
             {
@@ -209,7 +209,7 @@ namespace SAP_API.Service
                         {
                             PropertyNameCaseInsensitive = true
                         };
-                        ARInvoiceCreditRequest invoice = JsonSerializer.Deserialize<ARInvoiceCreditRequest>(json, options);
+                        ARInvoiceCreditRequestDTO invoice = JsonSerializer.Deserialize<ARInvoiceCreditRequestDTO>(json, options);
                         return invoice;
                     }
                 }
@@ -272,31 +272,43 @@ namespace SAP_API.Service
 
             }
             var (arInvoice, DocEntry) = await GetDocEntryARInvoiceAsync(ar.OriginalInvoiceCode);
-            var creditMemo = new
+            var creditMemo = new ARInvoiceCreditRequest
             {
                 DocDate = ar.DocDate,
                 DocDueDate = ar.DocDate,
+                TaxDate =  ar.DocDate,
                 CardCode = arInvoice.CardCode,
-                Comments = $"Hóa đơn điều chỉnh từ Hóa đơn "+DocEntry+" - POS",
-                DocumentLines = arInvoice.DocumentLines.Select((line, index) => new
+                Comments = "Tạo hóa đơn bán hàng điều chỉnh tại POS",
+                U_SoSeries = ar.MaSoHD,
+                U_KyHieuHD = ar.KyHieuHD,
+                U_SoChungTu = "POS" + ar.OriginalInvoiceCode,
+                U_LoaiHoaDonBan = "HDBH01",
+                U_POS = ar.InvoiceCode,
+                U_PBG = ar.OriginalInvoiceCode,
+                U_CCCD = ar.CardNumber,
+                U_HoTen = ar.CardName,
+                DocumentLines = arInvoice.DocumentLines.Select((line, index) => new ARInvoiceCreditLine
                 {
                     BaseType = 13,
                     BaseEntry = DocEntry,
                     BaseLine = line.LineNum,
                     Quantity = ar.ARInvoice_Lines.FirstOrDefault(e=>e.ItemCode == line.ItemCode)?.Quantity ?? 0,
-                    BatchNumbers = line.BatchNumbers.Select(b => new
+                    UnitPrice = line.UnitPrice,
+                    VatGroup = (line.VatGroup ?? "").ToString(),
+                    WarehouseCode = line.WarehouseCode,
+                    BatchNumbers = line.BatchNumbers.Select(b => new ARInvoiceLineBatch
                     {
-                        BatchNumber = ar.ARInvoice_Lines.FirstOrDefault(e => e.ItemCode == line.ItemCode)?.Batches?.FirstOrDefault(e=>e.BatchNumber ==b.BatchNumber)?.BatchNumber ?? "",
-                        Quantity = ar.ARInvoice_Lines.FirstOrDefault(e => e.ItemCode == line.ItemCode)?.Batches?.FirstOrDefault(e => e.BatchNumber == b.BatchNumber)?.Quantity ?? 0
+                        BatchNumber = ar.ARInvoice_Lines.FirstOrDefault(e => e.ItemCode == line.ItemCode)?.Batches?.FirstOrDefault(e => e.BatchNumber == b.BatchNumberProperty)?.BatchNumber ?? "",
+                        Quantity = ar.ARInvoice_Lines.FirstOrDefault(e => e.ItemCode == line.ItemCode)?.Batches?.FirstOrDefault(e => e.BatchNumber == b.BatchNumberProperty)?.Quantity ?? 0
                     }).ToList()
                 }).ToList()
             };
-            string invoiceJson = JsonSerializer.Serialize(arInvoice);
+            string invoiceJson = JsonSerializer.Serialize(creditMemo);
             var result = new Respond();
 
             try
             {
-                var (Entry, check) = await CreateCreditInvoiceAsync(arInvoice);
+                var (Entry, check) = await CreateCreditInvoiceAsync(creditMemo);
                 if (check)
                 {
                     result.DocEntry = Entry;
@@ -586,10 +598,10 @@ namespace SAP_API.Service
         {
             var req = new ARInvoiceRequest
             {
-                CardCode = src.CardCode,
                 DocDate = src.DocDate,
                 DocDueDate = src.DocDate,
                 TaxDate = src.DocDate,
+                CardCode = src.CardCode,
                 Comments = "Tạo hóa đơn bán hàng tại POS",
                 U_SoSeries = src.MaSoHD,
                 U_KyHieuHD = src.KyHieuHD,
@@ -597,48 +609,9 @@ namespace SAP_API.Service
                 U_LoaiHoaDonBan = "HDBH01",
                 U_POS = src.InvoiceCode,
                 U_CCCD = src.CardNumber,
-                U_HoTen = src.CardName, 
-                DocumentLines = src.ARInvoice_Lines.Select(line => new ARInvoiceLine
-                {
-                    ItemCode = line.ItemCode,
-                    Quantity = line.Quantity,
-                    UnitPrice = line.Price,
-                    VatGroup = (line.VatPercent ?? 0).ToString(),
-                    WarehouseCode = src.WhsCode,
-                    BatchNumbers = line.Batches.Select(b => new ARInvoiceLineBatch
-                    {
-                        BatchNumber = b.BatchNumber,
-                        Quantity = b.Quantity
-                    }).ToList()
-                }).ToList()
-            };
-
-            return req;
-        }
-
-        public static ARInvoiceRequest ToARCreditInvoiceRequest(ARInvoice src, string warehouseCode)
-        {
-
-            var req = new ARInvoiceRequest
-            {
-                CardCode = src.CardCode,
-                DocDate = src.DocDate,
-                DocDueDate = src.DocDate,
-                TaxDate = src.DocDate,
-                Comments = "Tạo Điều chỉnh hóa đơn bán hàng tại POS",
-                U_SoSeries = src.MaSoHD,
-                U_KyHieuHD = src.KyHieuHD,
-                U_LoaiHoaDonBan = "HDBH01",
-                U_POS = src.InvoiceCode,
-                U_SoChungTu = "POS" +src.InvoiceCode,
-                U_CCCD = src.CardNumber,
                 U_HoTen = src.CardName,
-                U_PBG = src.OriginalInvoiceCode ?? "",
                 DocumentLines = src.ARInvoice_Lines.Select(line => new ARInvoiceLine
                 {
-                    BaseType = line.BaseType,
-                    BaseEntry = line.BaseEntry,
-                    BaseLine = line.BaseLine,
                     ItemCode = line.ItemCode,
                     Quantity = line.Quantity,
                     UnitPrice = line.Price,
@@ -654,5 +627,44 @@ namespace SAP_API.Service
 
             return req;
         }
+
+        //public static ARInvoiceRequest ToARCreditInvoiceRequest(ARInvoice src, string warehouseCode)
+        //{
+
+        //    var req = new ARInvoiceRequest
+        //    {
+        //        CardCode = src.CardCode,
+        //        DocDate = src.DocDate,
+        //        DocDueDate = src.DocDate,
+        //        TaxDate = src.DocDate,
+        //        Comments = "Tạo Điều chỉnh hóa đơn bán hàng tại POS",
+        //        U_SoSeries = src.MaSoHD,
+        //        U_KyHieuHD = src.KyHieuHD,
+        //        U_LoaiHoaDonBan = "HDBH01",
+        //        U_POS = src.InvoiceCode,
+        //        U_SoChungTu = "POS" +src.InvoiceCode,
+        //        U_CCCD = src.CardNumber,
+        //        U_HoTen = src.CardName,
+        //        U_PBG = src.OriginalInvoiceCode ?? "",
+        //        DocumentLines = src.ARInvoice_Lines.Select(line => new ARInvoiceLine
+        //        {
+        //            BaseType = line.BaseType,
+        //            BaseEntry = line.BaseEntry,
+        //            BaseLine = line.BaseLine,
+        //            ItemCode = line.ItemCode,
+        //            Quantity = line.Quantity,
+        //            UnitPrice = line.Price,
+        //            VatGroup = (line.VatPercent ?? 0).ToString(),
+        //            WarehouseCode = src.WhsCode,
+        //            BatchNumbers = line.Batches.Select(b => new ARInvoiceLineBatch
+        //            {
+        //                BatchNumber = b.BatchNumber,
+        //                Quantity = b.Quantity
+        //            }).ToList()
+        //        }).ToList()
+        //    };
+
+        //    return req;
+        //}
     }
 }
