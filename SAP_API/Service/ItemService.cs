@@ -39,123 +39,154 @@ namespace SAP_API.Service
         }
         public async Task<bool> GetItemMasterData()
         {
-            var item = await _db.ItemView.ToListAsync();
-            var json = JsonConvert.SerializeObject(item, Formatting.Indented);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync(_api.BaseUrl+"api/Item/sync-OITM", content);
-
-            if (!response.IsSuccessStatusCode)
+            try
             {
-                var error = await response.Content.ReadAsStringAsync();
-                return false;
+                var item = await _db.ItemView.ToListAsync();
+                var json = JsonConvert.SerializeObject(item, Formatting.Indented);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync(_api.BaseUrl + "api/Item/sync-OITM", content);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    return false;
+                }
             }
+            catch { }
 
             return true;
         }
         public async Task<bool> GetItemPrice()
         {
-            var priceListData = await _db.PriceListView
+            try
+            {
+                var priceListData = await _db.PriceListView
             .ToListAsync();
-            var dto = new ProductPriceListSyncDto
-            {
-                Creator = priceListData.FirstOrDefault()?.PriceListCode.ToString(),
-                PriceListName = priceListData.FirstOrDefault()?.PriceListName,
-                ProductPriceListLine = priceListData
-                    .Select(x => new ProductPriceListLineSyncDto
-                    {
-                        ItemCode = x.ItemCode,
-                        SellingPrice = x.SellingPrice
-                    })
-                    .ToList()
-            };
+                var dto = new ProductPriceListSyncDto
+                {
+                    Creator = priceListData.FirstOrDefault()?.PriceListCode.ToString(),
+                    PriceListName = priceListData.FirstOrDefault()?.PriceListName,
+                    ProductPriceListLine = priceListData
+                        .Select(x => new ProductPriceListLineSyncDto
+                        {
+                            ItemCode = x.ItemCode,
+                            SellingPrice = x.SellingPrice
+                        })
+                        .ToList()
+                };
 
-            var json = JsonConvert.SerializeObject(dto, Formatting.Indented);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync(_api.BaseUrl + "api/ProductPriceList/sync", content);
+                var json = JsonConvert.SerializeObject(dto, Formatting.Indented);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync(_api.BaseUrl + "api/ProductPriceList/sync", content);
 
-            if (!response.IsSuccessStatusCode)
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    return false;
+                }
+            }
+            catch
             {
-                var error = await response.Content.ReadAsStringAsync();
-                return false;
+
             }
 
             return true;
         }
         public async Task<bool> GetTransfer()
         {
-            var items = await _db.TransferView.ToListAsync();
-            List<TransferView> ls = new List<TransferView>();
-            foreach(var item in items.Select(e=>e.Stt).Distinct())
+            try
             {
-                ls.AddRange(items.Where(e=>e.Stt == item).ToList());
-                var json = JsonConvert.SerializeObject(ls, Formatting.Indented);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-                var response = await _httpClient.PostAsync(_apiAPIEcomaint.BaseUrl + "insert-multi_phu_tung", content);
+                var items = await _db.TransferView.ToListAsync();
+                List<TransferView> ls = new List<TransferView>();
+                foreach (var item in items.Select(e => e.Stt).Distinct())
+                {
+                    ls.AddRange(items.Where(e => e.Stt == item).ToList());
+                    var json = JsonConvert.SerializeObject(ls, Formatting.Indented);
+                    var content = new StringContent(json, Encoding.UTF8, "application/json");
+                    var response = await _httpClient.PostAsync(_apiAPIEcomaint.BaseUrl + "insert-multi_phu_tung", content);
 
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    WriteLog(error);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        var error = await response.Content.ReadAsStringAsync();
+                        WriteLog(error);
+                    }
+                    else
+                    {
+                        WriteLog("thành công 2");
+                        _db.Database.ExecuteSqlRaw("update OWTR set U_MaPhieuBaoTri = {0} where DocEntry = {1}", item.ToString(), item);
+                        WriteLog("thành công 2");
+                    }
+                    ls = new List<TransferView>();
                 }
-                else
-                {
-                    WriteLog("thành công 2");
-                    _db.Database.ExecuteSqlRaw("update OWTR set U_MaPhieuBaoTri = {0} where DocEntry = {1}", item.ToString(), item);
-                    WriteLog("thành công 2");
-                }
-                ls = new List<TransferView>();
-            } 
+            }catch
+            {
+
+            }
             return true;
         }
         public async Task<bool> GetIssue()
         {
-            var items = await _db.GoodIssueView.ToListAsync();
-            List<GoodIssueView> ls = new List<GoodIssueView>();
-            foreach (var item in items.Select(e => e.MS_DH_XUAT_PT).Distinct())
+            try
             {
-                ls.AddRange(items.Where(e => e.MS_DH_XUAT_PT == item).ToList());
-                var json = JsonConvert.SerializeObject(ls, Formatting.Indented);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-                var response = await _httpClient.PostAsync(_apiAPIEcomaint.BaseUrl + "insert-multi_xuat_phu_tung", content);
+                var items = await _db.GoodIssueView.ToListAsync();
+                List<GoodIssueView> ls = new List<GoodIssueView>();
+                foreach (var item in items.Select(e => e.MS_DH_XUAT_PT).Distinct())
+                {
+                    ls.AddRange(items.Where(e => e.MS_DH_XUAT_PT == item).ToList());
+                    var json = JsonConvert.SerializeObject(ls, Formatting.Indented);
+                    var content = new StringContent(json, Encoding.UTF8, "application/json");
+                    var response = await _httpClient.PostAsync(_apiAPIEcomaint.BaseUrl + "insert-multi_xuat_phu_tung", content);
 
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    WriteLog(error);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        var error = await response.Content.ReadAsStringAsync();
+                        WriteLog(error);
+                    }
+                    else
+                    {
+                        WriteLog("thành công 1");
+                        _db.Database.ExecuteSqlRaw("update OIGE set U_POS = {0} where DocEntry = {1}", item.ToString(), item);
+                        WriteLog("thành công 1");
+                    }
+                    ls = new List<GoodIssueView>();
                 }
-                else
-                {
-                    WriteLog("thành công 1");
-                    _db.Database.ExecuteSqlRaw("update OIGE set U_POS = {0} where DocEntry = {1}", item.ToString(), item);
-                    WriteLog("thành công 1");
-                }
-                ls = new List<GoodIssueView>();
+            }
+            catch
+            {
+
             }
             return true;
         }
         public async Task<bool> GetGoodReceipt()
         {
-            var items = await _db.GoodReceiptView.ToListAsync();
-            List<GoodReceiptView> ls = new List<GoodReceiptView>();
-            foreach (var item in items.Select(e =>  e.mS_DH_NHAP_PT).Distinct())
+            try
             {
-                ls.AddRange(items.Where(e => e.mS_DH_NHAP_PT == item).ToList());
-                var json = JsonConvert.SerializeObject(ls, Formatting.Indented);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-                var response = await _httpClient.PostAsync(_apiAPIEcomaint.BaseUrl + "insert-multi_nhap_phu_tung", content);
+                var items = await _db.GoodReceiptView.ToListAsync();
+                List<GoodReceiptView> ls = new List<GoodReceiptView>();
+                foreach (var item in items.Select(e => e.mS_DH_NHAP_PT).Distinct())
+                {
+                    ls.AddRange(items.Where(e => e.mS_DH_NHAP_PT == item).ToList());
+                    var json = JsonConvert.SerializeObject(ls, Formatting.Indented);
+                    var content = new StringContent(json, Encoding.UTF8, "application/json");
+                    var response = await _httpClient.PostAsync(_apiAPIEcomaint.BaseUrl + "insert-multi_nhap_phu_tung", content);
 
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    WriteLog(error);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        var error = await response.Content.ReadAsStringAsync();
+                        WriteLog(error);
+                    }
+                    else
+                    {
+                        WriteLog("thành công");
+                        _db.Database.ExecuteSqlRaw("update OIGN set U_POS = {0} where DocEntry = {1}", item, item);
+                        WriteLog("thành công");
+                    }
+                    ls = new List<GoodReceiptView>();
                 }
-                else
-                {
-                    WriteLog("thành công");
-                    _db.Database.ExecuteSqlRaw("update OIGN set U_POS = {0} where DocEntry = {1}", item, item);
-                    WriteLog("thành công");
-                }
-                ls = new List<GoodReceiptView>();
+            }
+            catch
+            {
+
             }
             return true;
         }
