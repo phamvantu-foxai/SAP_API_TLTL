@@ -40,16 +40,16 @@ namespace SAP_API.Service
         public async Task<Respond> CreateInvoiceWithPaymentAsync(ARInvoice ar)
         {
             Respond respond = new Respond();
-            if(cookies == null || cookies.SessionTime < DateTime.Now)
-            {
-                var (ckies, check, Mes) = await _sessionManager.LoginAsync();
-                if(check)
+            //if(cookies == null || cookies.SessionTime < DateTime.Now)
+            //{
+                var (ckies, check1, Mes) = await _sessionManager.LoginAsync();
+                if(check1)
                 {
                     cookies.SessionTime = ckies.SessionTime;
                     cookies.B1SESSION = ckies.B1SESSION;
                     cookies.ROUTEID = ckies.ROUTEID;
                 }    
-            }
+            //}
                 
             var _httpWebRequests = (HttpWebRequest)WebRequest.Create($"{_api.BaseUrl}/Invoices?$select=DocEntry&$filter=U_POS eq '{ar.InvoiceCode}'");
             _httpWebRequests.ContentType = "application/json";
@@ -97,8 +97,8 @@ namespace SAP_API.Service
 
             try
             {
-                var (DocEntry,check) = await CreateInvoiceAsync(arInvoice);
-                if (check)
+                var (DocEntry,check2) = await CreateInvoiceAsync(arInvoice);
+                if (check2)
                 {
                     result.DocEntry = DocEntry;
                     result.Success = true;
@@ -123,8 +123,8 @@ namespace SAP_API.Service
         }
         public async Task<(ARInvoiceCreditRequestDTO, int)> GetDocEntryARInvoiceAsync(string OriginalInvoiceCode)
         {
-            if (cookies == null || cookies.SessionTime < DateTime.Now)
-            {
+            //if (cookies == null || cookies.SessionTime < DateTime.Now)
+            //{
                 var (ckies, check, Mes) = await _sessionManager.LoginAsync();
                 if (check)
                 {
@@ -132,7 +132,7 @@ namespace SAP_API.Service
                     cookies.B1SESSION = ckies.B1SESSION;
                     cookies.ROUTEID = ckies.ROUTEID;
                 }
-            }
+            //}
             var _httpWebRequests = (HttpWebRequest)WebRequest.Create($"{_api.BaseUrl}/Invoices?$select=DocEntry&$filter=U_POS eq '{OriginalInvoiceCode}'");
             _httpWebRequests.ContentType = "application/json";
             _httpWebRequests.Method = "GET";
@@ -175,8 +175,8 @@ namespace SAP_API.Service
         }
         public async Task<ARInvoiceCreditRequestDTO> GetARInvoiceAsync(int DocEntry)
         {
-            if (cookies == null || cookies.SessionTime < DateTime.Now)
-            {
+            //if (cookies == null || cookies.SessionTime < DateTime.Now)
+            //{
                 var (ckies, check, Mes) = await _sessionManager.LoginAsync();
                 if (check)
                 {
@@ -184,7 +184,7 @@ namespace SAP_API.Service
                     cookies.B1SESSION = ckies.B1SESSION;
                     cookies.ROUTEID = ckies.ROUTEID;
                 }
-            }
+            //}
             var _httpWebRequests = (HttpWebRequest)WebRequest.Create($"{_api.BaseUrl}/Invoices("+ DocEntry + ")");
             _httpWebRequests.ContentType = "application/json";
             _httpWebRequests.Method = "GET";
@@ -222,8 +222,8 @@ namespace SAP_API.Service
         public async Task<Respond> CreateCreditInvoiceWithPaymentAsync(ARInvoice ar)
         {
             Respond respond = new Respond();
-            if (cookies == null || cookies.SessionTime < DateTime.Now)
-            {
+            //if (cookies == null || cookies.SessionTime < DateTime.Now)
+            //{
                 var (ckies, check, Mes) = await _sessionManager.LoginAsync();
                 if (check)
                 {
@@ -231,7 +231,7 @@ namespace SAP_API.Service
                     cookies.B1SESSION = ckies.B1SESSION;
                     cookies.ROUTEID = ckies.ROUTEID;
                 }
-            }
+            //}
             
             var _httpWebRequests = (HttpWebRequest)WebRequest.Create($"{_api.BaseUrl}/CreditNotes?$select=DocEntry&$filter=U_POS eq '{ar.InvoiceCode}'");
             _httpWebRequests.ContentType = "application/json";
@@ -308,8 +308,8 @@ namespace SAP_API.Service
 
             try
             {
-                var (Entry, check) = await CreateCreditInvoiceAsync(creditMemo);
-                if (check)
+                var (Entry, check3) = await CreateCreditInvoiceAsync(creditMemo);
+                if (check3)
                 {
                     result.DocEntry = Entry;
                     result.Success = true;
@@ -331,6 +331,122 @@ namespace SAP_API.Service
 
             return result;
         }
+
+
+        public async Task<Respond> CreateCCancleInvoice(ARInvoice ar)
+        {
+            Respond respond = new Respond();
+            //if (cookies == null || cookies.SessionTime < DateTime.Now)
+            //{
+                var (ckies, check, Mes) = await _sessionManager.LoginAsync();
+                if (check)
+                {
+                    cookies.SessionTime = ckies.SessionTime;
+                    cookies.B1SESSION = ckies.B1SESSION;
+                    cookies.ROUTEID = ckies.ROUTEID;
+                }
+            //}
+
+            var _httpWebRequests = (HttpWebRequest)WebRequest.Create($"{_api.BaseUrl}/Invoices?$select=DocEntry&$filter=U_POS eq '{ar.OriginalInvoiceCode}'");
+            _httpWebRequests.ContentType = "application/json";
+            _httpWebRequests.Method = "GET";
+            _httpWebRequests.KeepAlive = true;
+            _httpWebRequests.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
+            _httpWebRequests.Headers.Add("B1S-WCFCompatible", "true");
+            _httpWebRequests.Headers.Add("B1S-MetadataWithoutSession", "true");
+            _httpWebRequests.Accept = "*/*";
+            _httpWebRequests.ServicePoint.Expect100Continue = false;
+            _httpWebRequests.Headers.Add("Accept-Encoding", "gzip, deflate, br");
+            _httpWebRequests.Headers.Add("Cookie", cookies.B1SESSION + cookies.ROUTEID);
+            _httpWebRequests.AutomaticDecompression = DecompressionMethods.GZip;
+            var httpResponse = (HttpWebResponse)_httpWebRequests.GetResponse();
+            if (httpResponse.StatusCode == HttpStatusCode.OK)
+            {
+                using (var reader = new StreamReader(httpResponse.GetResponseStream()))
+                {
+                    var json = reader.ReadToEnd();
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+
+                    if (root.TryGetProperty("value", out var valueProp) && valueProp.ValueKind == JsonValueKind.Array)
+                    {
+                        var first = valueProp.EnumerateArray().FirstOrDefault();
+                        if (first.ValueKind != JsonValueKind.Undefined && first.TryGetProperty("DocEntry", out var docEntryProp))
+                        {
+                            return new Respond
+                            {
+                                InvoicePos = ar.InvoiceCode,
+                                Success = false,
+                                DocEntry = docEntryProp.ToString(),
+                                Error = $"Hóa đơn điều chỉnh với U_POS {ar.InvoiceCode} đã được đồng bộ trước đó."
+                            };
+                        }
+                    }
+                }
+
+            }
+            var (arInvoice, DocEntry) = await GetDocEntryARInvoiceAsync(ar.OriginalInvoiceCode);
+            var creditMemo = new ARInvoiceCreditRequest
+            {
+                DocDate = ar.DocDate,
+                DocDueDate = ar.DocDate,
+                TaxDate = ar.DocDate,
+                CardCode = arInvoice.CardCode,
+                Comments = "Tạo hóa đơn bán hàng điều chỉnh tại POS",
+                U_SoSeries = ar.MaSoHD,
+                U_KyHieuHD = ar.KyHieuHD,
+                U_SoChungTu = "POS" + ar.OriginalInvoiceCode,
+                U_LoaiHoaDonBan = "HDBH01",
+                U_POS = ar.InvoiceCode,
+                U_PBG = ar.OriginalInvoiceCode,
+                U_CCCD = ar.CardNumber,
+                U_HoTen = ar.CardName,
+                DocumentLines = arInvoice.DocumentLines.Select((line, index) => new ARInvoiceCreditLine
+                {
+                    BaseType = 13,
+                    BaseEntry = DocEntry,
+                    BaseLine = line.LineNum,
+                    Quantity = ar.ARInvoice_Lines.FirstOrDefault(e => e.ItemCode == line.ItemCode)?.Quantity ?? 0,
+                    UnitPrice = line.UnitPrice,
+                    VatGroup = (line.VatGroup ?? "").ToString(),
+                    WarehouseCode = line.WarehouseCode,
+                    BatchNumbers = line.BatchNumbers.Select(b => new ARInvoiceLineBatch
+                    {
+                        BatchNumber = ar.ARInvoice_Lines.FirstOrDefault(e => e.ItemCode == line.ItemCode)?.Batches?.FirstOrDefault(e => e.BatchNumber == b.BatchNumberProperty)?.BatchNumber ?? "",
+                        Quantity = ar.ARInvoice_Lines.FirstOrDefault(e => e.ItemCode == line.ItemCode)?.Batches?.FirstOrDefault(e => e.BatchNumber == b.BatchNumberProperty)?.Quantity ?? 0
+                    }).ToList()
+                }).ToList()
+            };
+            string invoiceJson = JsonSerializer.Serialize(creditMemo);
+            var result = new Respond();
+
+            try
+            {
+                var (Entry, check4) = await CreateCreditInvoiceAsync(creditMemo);
+                if (check4)
+                {
+                    result.DocEntry = Entry;
+                    result.Success = true;
+                    result.InvoicePos = ar.InvoiceCode;
+                }
+                else
+                {
+                    result.Success = false;
+                    result.Error = Entry;
+                    result.InvoicePos = ar.InvoiceCode;
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.Error = ex.Message;
+            }
+
+            return result;
+        }
+
+
 
 
         public async Task<(string, bool)> CreateInvoiceAsync(ARInvoiceRequest rq)

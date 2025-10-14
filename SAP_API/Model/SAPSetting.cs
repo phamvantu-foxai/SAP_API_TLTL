@@ -20,6 +20,17 @@
         public string Password { get; set; }
         public string CashAccount { get; set; }
     }
+    public class SAPSERVER
+    {
+        public string SapServer { get; set; }
+        public string SapCompanyDB { get; set; }
+        public string SapUserName { get; set; }
+        public string SapPassword { get; set; }
+        public string SapDbUserName { get; set; }
+        public string SapDbPassword { get; set; }
+        public string SapLicenseServer { get; set; }
+        public string CashAccount { get; set; }
+    }
     public class APISyn
     {
         public string BaseUrl { get; set; }

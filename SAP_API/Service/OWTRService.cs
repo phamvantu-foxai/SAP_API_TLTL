@@ -29,8 +29,8 @@ namespace SAP_API.Service
             List<OWTR> owtrs = new List<OWTR>();
             try
             {
-                if (cookies == null || cookies.SessionTime < DateTime.Now)
-                {
+                //if (cookies == null || cookies.SessionTime < DateTime.Now)
+                //{
                     var (ckies, check, Mes) = await _sessionManager.LoginAsync();
                     if (check)
                     {
@@ -38,7 +38,7 @@ namespace SAP_API.Service
                         cookies.B1SESSION = ckies.B1SESSION;
                         cookies.ROUTEID = ckies.ROUTEID;
                     }
-                }
+                //}
                 string whsCode = store;
                 HttpWebRequest _httpWebRequests;
                 if(DocNumber.IsNullOrEmpty())
@@ -165,8 +165,8 @@ namespace SAP_API.Service
             Message message = new Message();
             try
             {
-                if (cookies == null || cookies.SessionTime < DateTime.Now)
-                {
+                //if (cookies == null || cookies.SessionTime < DateTime.Now)
+                //{
                     var (ckies, check, Mes) = await _sessionManager.LoginAsync();
                     if (check)
                     {
@@ -174,7 +174,7 @@ namespace SAP_API.Service
                         cookies.B1SESSION = ckies.B1SESSION;
                         cookies.ROUTEID = ckies.ROUTEID;
                     }
-                }
+                //}
                 string whsCode = "";
                 //if (store == "CSQO")
                 //{
