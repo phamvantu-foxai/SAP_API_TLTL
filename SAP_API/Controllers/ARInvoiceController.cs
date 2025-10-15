@@ -24,7 +24,7 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> addARInvoice(ARInvoice ar)
         {
             
-            var mess = await  _sapService.CreateInvoiceWithPaymentAsync(ar);
+            var mess = await  _sapService.CreateInvoiceWithPaymentDIAPIAsync(ar);
             return Ok(mess);
         }
     }

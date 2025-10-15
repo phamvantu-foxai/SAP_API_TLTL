@@ -1,5 +1,11 @@
 ﻿{
+  "AllowedHosts": "*",
   "$schema": "http://json.schemastore.org/launchsettings.json",
+  "Jwt": {
+    "Key": "KHPK6Ucf/zjvU4qW8/vkuuGLHeIo0l9ACJiTaAPLKbk=",
+    "Issuer": "https://localhost:7035",
+    "Audience": "http://localhost:5001"
+  },
   "iisSettings": {
     "windowsAuthentication": false,
     "anonymousAuthentication": true,

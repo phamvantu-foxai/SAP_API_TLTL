@@ -10,9 +10,11 @@ namespace SAP_API.Data
         }
         public DbSet<ItemDTO> ItemView { get; set; }
         public DbSet<PriceListView> PriceListView { get; set; }
+        public DbSet<OWTRView> OWTRView { get; set; }
         public DbSet<TransferView> TransferView { get; set; }
         public DbSet<GoodIssueView> GoodIssueView { get; set; }
         public DbSet<GoodReceiptView> GoodReceiptView { get; set; }
+        public DbSet<DocEntryResult> DocEntryResults { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -20,6 +22,8 @@ namespace SAP_API.Data
             .HasNoKey()
             .ToView("vw_ItemMaterData");
 
+            modelBuilder.Entity<DocEntryResult>().HasNoKey();
+            modelBuilder.Entity<OWTRView>().HasNoKey().ToView("uv_OWTR"); ;
             modelBuilder.Entity<PriceListView>()
             .HasNoKey()
             .ToView("vw_PriceList");

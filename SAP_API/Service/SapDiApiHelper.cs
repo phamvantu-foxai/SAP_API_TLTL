@@ -1,35 +1,49 @@
-﻿using SAP_API.Model;
+﻿using Microsoft.Extensions.Options;
+using SAP_API.Model;
 using SAPbobsCOM;
+using System.Net.Http;
 
 namespace SAP_API.Service
 {
     public class SAPConnection
     {
-        private static SAPbobsCOM.Company company;
-        public static SAPbobsCOM.Company SapCompany { get { return company; } }
-        public static bool Connect()
-        {
-            company = new SAPbobsCOM.Company(); ;
-            company.Server = ConfigurationManager.["SapServer"].ToString();
-            company.CompanyDB = ConfigurationManager.AppSettings["SapCompanyDB"].ToString();
-            company.DbServerType = SAPbobsCOM.BoDataServerTypes.dst_MSSQL2019;
-            company.DbUserName = ConfigurationManager.AppSettings["SapDbUserName"].ToString();
-            company.DbPassword = ConfigurationManager.AppSettings["SapDbPassword"].ToString();
-            company.language = SAPbobsCOM.BoSuppLangs.ln_English;
-            company.UseTrusted = false;
-            company.UserName = ConfigurationManager.AppSettings["SapUserName"].ToString();
-            company.Password = ConfigurationManager.AppSettings["SapPassword"].ToString();
+        private SAPbobsCOM.Company _company;
+        private readonly SAPSERVER _settings;
 
-            if (company.Connected == true)
-                return true;
-            else
-            {
-                if (company.Connect() != 0)
-                    return false;
-            }
-            return true;
+        public SAPConnection(IOptions<SAPSERVER> settings)
+        {
+            _settings = settings.Value;
         }
 
+        public SAPbobsCOM.Company Company => _company;
 
+        public bool Connect()
+        {
+            if (_company != null && _company.Connected)
+                return true;
+
+            _company = new SAPbobsCOM.Company
+            {
+                Server = _settings.SapServer,
+                CompanyDB = _settings.SapCompanyDB,
+                DbServerType = SAPbobsCOM.BoDataServerTypes.dst_MSSQL2019,
+                DbUserName = _settings.SapDbUserName,
+                DbPassword = _settings.SapDbPassword,
+                language = SAPbobsCOM.BoSuppLangs.ln_English,
+                UseTrusted = false,
+                UserName = _settings.SapUserName,
+                Password = _settings.SapPassword
+            };
+
+            int result = _company.Connect();
+            if (result != 0)
+            {
+                string errMsg = _company.GetLastErrorDescription();
+                Console.WriteLine($"❌ SAP connection failed: {errMsg}");
+                return false;
+            }
+
+            return true;
+        }
     }
 }

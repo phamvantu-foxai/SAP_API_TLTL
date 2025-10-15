@@ -29,7 +29,7 @@ builder.Services.Configure<APISetting>(
     builder.Configuration.GetSection("APISetting"));
 builder.Services.Configure<SAPSERVER>(
     builder.Configuration.GetSection("SAPServer"));
-
+builder.Services.AddSingleton<SAPConnection>();
 builder.Services.Configure<APISyn>(
     builder.Configuration.GetSection("APISyn"));
 builder.Services.Configure<APIEcomaint>(
@@ -41,56 +41,54 @@ builder.Services.AddSingleton<SapDiApiHelper>();
 builder.Services.AddScoped<SapInvoiceService>();
 builder.Services.AddQuartz(q =>
 {
-    q.UseMicrosoftDependencyInjectionJobFactory();
-    var jobItem1 = new JobKey("jobItem1");
-    q.AddJob<JobItem>(opts => opts.WithIdentity(jobItem1));
-    q.AddTrigger(opts => opts
-        .ForJob(jobItem1)
-        .WithIdentity("jobItem1-trigger")
-        .WithCronSchedule("0 */10 * * * ?")
-    );
-    Directory.CreateDirectory("Logs");
-    string path = "Logs/error.log";
-    File.AppendAllText(path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - Bắt đầu {Environment.NewLine}");
-    var jobItemPrice1 = new JobKey("jobItemPrice1");
-    q.AddJob<JobPriceItem>(opts => opts.WithIdentity(jobItemPrice1));
-    q.AddTrigger(opts => opts
-        .ForJob(jobItemPrice1)
-        .WithIdentity("jobItemPrice1-trigger")
-        .WithCronSchedule("0 0 7 * * ?")
-    );
-    Directory.CreateDirectory("Logs");
-    path = "Logs/error.log";
-    File.AppendAllText(path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - Bắt đầu JobTransfer {Environment.NewLine}");
-    var jobItemSyn1 = new JobKey("jobItemSyn1");
-    q.AddJob<JobItemSyn>(opts => opts.WithIdentity(jobItemSyn1));
-    q.AddTrigger(opts => opts
-        .ForJob(jobItemSyn1)
-        .WithIdentity("jobItemSyn1-trigger")
-        .WithCronSchedule("0 */2 * * * ?")
-    );
-    Directory.CreateDirectory("Logs");
-    path = "Logs/error.log";
-    File.AppendAllText(path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - Bắt đầu JobGoodissue {Environment.NewLine}");
-    var jobGoodIssue1 = new JobKey("jobGoodIssue1");
-    q.AddJob<JobGoodissue>(opts => opts.WithIdentity(jobGoodIssue1));
-    q.AddTrigger(opts => opts
-        .ForJob(jobGoodIssue1)
-        .WithIdentity("jobGoodIssue1-trigger")
-        .WithCronSchedule("0 */2 * * * ?")
-    );
-    Directory.CreateDirectory("Logs");
-    path = "Logs/error.log";
-    File.AppendAllText(path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - Bắt đầu JobGoodReceipt {Environment.NewLine}");
-    var jobGoodReceipt1 = new JobKey("jobGoodReceipt1");
-    q.AddJob<JobGoodReceipt>(opts => opts.WithIdentity(jobGoodReceipt1));
-    q.AddTrigger(opts => opts
-        .ForJob(jobGoodReceipt1)
-        .WithIdentity("jobGoodReceipt1-trigger")
-        .WithCronSchedule("0 */2 * * * ?")
-    );
-
-
+    //q.UseMicrosoftDependencyInjectionJobFactory();
+    //var jobItem1 = new JobKey("jobItem1");
+    //q.AddJob<JobItem>(opts => opts.WithIdentity(jobItem1));
+    //q.AddTrigger(opts => opts
+    //    .ForJob(jobItem1)
+    //    .WithIdentity("jobItem1-trigger")
+    //    .WithCronSchedule("0 */10 * * * ?")
+    //);
+    //Directory.CreateDirectory("Logs");
+    //string path = "Logs/error.log";
+    //File.AppendAllText(path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - Bắt đầu {Environment.NewLine}");
+    //var jobItemPrice1 = new JobKey("jobItemPrice1");
+    //q.AddJob<JobPriceItem>(opts => opts.WithIdentity(jobItemPrice1));
+    //q.AddTrigger(opts => opts
+    //    .ForJob(jobItemPrice1)
+    //    .WithIdentity("jobItemPrice1-trigger")
+    //    .WithCronSchedule("0 0 7 * * ?")
+    //);
+    //Directory.CreateDirectory("Logs");
+    //path = "Logs/error.log";
+    //File.AppendAllText(path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - Bắt đầu JobTransfer {Environment.NewLine}");
+    //var jobItemSyn1 = new JobKey("jobItemSyn1");
+    //q.AddJob<JobItemSyn>(opts => opts.WithIdentity(jobItemSyn1));
+    //q.AddTrigger(opts => opts
+    //    .ForJob(jobItemSyn1)
+    //    .WithIdentity("jobItemSyn1-trigger")
+    //    .WithCronSchedule("0 */2 * * * ?")
+    //);
+    //Directory.CreateDirectory("Logs");
+    //path = "Logs/error.log";
+    //File.AppendAllText(path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - Bắt đầu JobGoodissue {Environment.NewLine}");
+    //var jobGoodIssue1 = new JobKey("jobGoodIssue1");
+    //q.AddJob<JobGoodissue>(opts => opts.WithIdentity(jobGoodIssue1));
+    //q.AddTrigger(opts => opts
+    //    .ForJob(jobGoodIssue1)
+    //    .WithIdentity("jobGoodIssue1-trigger")
+    //    .WithCronSchedule("0 */2 * * * ?")
+    //);
+    //Directory.CreateDirectory("Logs");
+    //path = "Logs/error.log";
+    //File.AppendAllText(path, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - Bắt đầu JobGoodReceipt {Environment.NewLine}");
+    //var jobGoodReceipt1 = new JobKey("jobGoodReceipt1");
+    //q.AddJob<JobGoodReceipt>(opts => opts.WithIdentity(jobGoodReceipt1));
+    //q.AddTrigger(opts => opts
+    //    .ForJob(jobGoodReceipt1)
+    //    .WithIdentity("jobGoodReceipt1-trigger")
+    //    .WithCronSchedule("0 */2 * * * ?")
+    //);
 });
 builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
 builder.Services.AddHttpClient<SapSessionManager>()

@@ -20,10 +20,10 @@ namespace SAP_API.Controllers
         }
         [HttpPost]
         [AllowAnonymous]
-        public async Task<IActionResult> addARInvoice(ARInvoice ar)
+        public async Task<IActionResult> addARInvoice(CancelARInvoice ar)
         {
 
-            var mess = await _sapService.CreateInvoiceWithPaymentAsync(ar);
+            var mess = await _sapService.CreateCancelInvoiceWithPaymentDIAPIAsync(ar);
             return Ok(mess);
         }
     }

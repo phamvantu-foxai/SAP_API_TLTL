@@ -21,7 +21,7 @@ namespace SAP_API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> getByGoodReceipt([FromBody] Request request)
         {
-            var (mess, owtr) = await _owtrService.GetOwtrAsync(request.DocNumber ?? "", request.Store);
+            var (mess, owtr) = await _owtrService.GetOwtrDIAPIAsync(request.DocNumber ?? "", request.Store);
             if (mess != null)
             {
                 return BadRequest(mess);
@@ -32,7 +32,7 @@ namespace SAP_API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> updateByGoodReceipt([FromBody] Request request)
         {
-            var mess = await _owtrService.UpdateOwtr(request.DocNumber, request.Store, request.DocnumberPOS);
+            var mess = await _owtrService.UpdateOwtrDIAPI(request.DocNumber, request.Store, request.DocnumberPOS);
             if (mess != null)
             {
                 return BadRequest(mess);
