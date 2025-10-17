@@ -29,6 +29,7 @@ namespace SAP_API.Service
                 DbServerType = SAPbobsCOM.BoDataServerTypes.dst_MSSQL2019,
                 DbUserName = _settings.SapDbUserName,
                 DbPassword = _settings.SapDbPassword,
+                LicenseServer = _settings.SapLicenseServer,
                 language = SAPbobsCOM.BoSuppLangs.ln_English,
                 UseTrusted = false,
                 UserName = _settings.SapUserName,
