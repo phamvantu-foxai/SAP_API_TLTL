@@ -133,4 +133,27 @@ namespace SAP_API.Model
         public decimal SellingPrice { get; set; }
 
     }
+    public class ItemOnhand
+    {
+        public string ItemCode { get; set; }
+        public string Warehouse { get; set; }
+
+        public decimal? OnHand { get; set; }
+        public decimal?  IsCommited { get; set; }
+        public decimal? OnOrder { get; set; }
+        public decimal? Available { get; set; }
+    }
+    public class ItemView
+    {
+        public string ItemCode { get; set; }
+        public ICollection<OITW> OITW { get; set; }
+    }
+    public class OITW
+    {
+        public string Warehouse { get; set; }
+        public decimal? OnHand { get; set; }
+        public decimal? IsCommited { get; set; }
+        public decimal? OnOrder { get; set; }
+        public decimal? Available { get; set; }
+    }
 }

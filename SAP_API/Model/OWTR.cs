@@ -63,4 +63,18 @@ namespace SAP_API.Model
         public string BatchNumber { get; set; }
         public double Quantity { get; set; }
     }
+    public class OCRDView
+    {
+        public string CardCode { get; set; } = string.Empty;
+        public string CardName { get; set; } = string.Empty;
+        public string CardType { get; set; } = string.Empty;
+        public Int16? GroupCode { get; set; }
+        public string? GroupName { get; set; }
+        public string? LicTradNum { get; set; }
+        public string? AliasName { get; set; }
+        public string? Phone1 { get; set; }
+        public string? E_Mail { get; set; }
+        public string? U_NhomKH1 { get; set; }
+        public string? NhomKH1Name { get; set; }
+    }
 }

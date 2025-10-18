@@ -1,10 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Quartz;
 using SAP_API.Data;
 using SAP_API.Model;
 using SAP_API.Service;
 using SAPbobsCOM;
 using System;
+using System.Text;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -97,9 +102,87 @@ builder.Services.AddHttpClient<SapSessionManager>()
         {
             ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
         });
-var app = builder.Build();
+var key = "ThisIsMyUltraSecretKeyForJWT256Bit!!"; // cấu hình trong appsettings.json
 
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+builder.Services.AddApiVersioning(opt =>
+{
+    opt.DefaultApiVersion = new Microsoft.AspNetCore.Mvc.ApiVersion(1, 0);
+    opt.AssumeDefaultVersionWhenUnspecified = true;
+    opt.ReportApiVersions = true;
+});
+
+builder.Services.AddVersionedApiExplorer(opt =>
+{
+    opt.GroupNameFormat = "'v'VVV";
+    opt.SubstituteApiVersionInUrl = true;
+});
+
+// ✅ Swagger có nhiều version
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+   
+
+    options.SwaggerDoc("v2", new OpenApiInfo
+    {
+        Version = "v2",
+        Title = "SAP B1 API v2",
+        Description = "Phiên bản mới - chỉ dành cho IThangLong"
+    });
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Version = "v1",
+        Title = "SAP B1 API v1",
+        Description = "Phiên bản cũ - API mặc định"
+    });
+    // ✅ Thêm xác thực JWT vào Swagger
+    options.AddSecurityDefinition("JWT", new OpenApiSecurityScheme
+    {
+        Description = "Nhập token JWT vào đây (không cần chữ 'Bearer')",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,   // kiểu HTTP auth
+        Scheme = "bearer",                // chính là bearer scheme
+        BearerFormat = "JWT"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "JWT"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+var app = builder.Build();
 app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v2/swagger.json", "API v2");
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "API v1");
+});
 app.UseCors("AllowAll");
 app.UseSwaggerUI();
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Gridify;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -13,6 +14,7 @@ using System.Data.Common;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Channels;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace SAP_API.Service
 {
@@ -403,6 +405,29 @@ namespace SAP_API.Service
                 message.Status = 400;
                 return message;
             }
+        }
+
+        public async Task<(Message, List<OCRDView>, int)> GetOCRDAsync(GridifyQuery query)
+        {
+            Message message = new Message();
+            try
+            {
+                var ocrd = _db.OCRDView
+                   .AsNoTracking()
+                   .ApplyFiltering(query);
+
+                var total = await ocrd.CountAsync();
+                var doc = await ocrd.ApplyOrdering(query).ApplyPaging(query).ToListAsync();
+                return (null, doc, total);
+                    
+            }
+            catch (Exception ex)
+            {
+                message.Status = 400;
+                message.Error = ex.Message;
+                return (message, null,0);
+            }
+
         }
     }
 }

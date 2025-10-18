@@ -606,6 +606,19 @@ namespace SAP_API.Service
                 return ($"Hóa đơn {docEntries} đã bị hủy trước đó", false);
 
             var CancelInvoice = oInvoice.CreateCancellationDocument();
+            for (int i = 0; i < oInvoice.Lines.Count; i++)
+            {
+                CancelInvoice.Lines.SetCurrentLine(i);
+                for (int j = 0; j < oInvoice.Lines.BatchNumbers.Count; j++)
+                {
+                    oInvoice.Lines.BatchNumbers.SetCurrentLine(j);
+                    CancelInvoice.Lines.BatchNumbers.BatchNumber = oInvoice.Lines.BatchNumbers.BatchNumber;
+                    CancelInvoice.Lines.BatchNumbers.Quantity = oInvoice.Lines.BatchNumbers.Quantity;
+                    CancelInvoice.Lines.BatchNumbers.Add();
+                }
+
+                CancelInvoice.Lines.Add();
+            }
             if (CancelInvoice.Add() != 0)
             {
                 oCompany.GetLastError(out int errCode, out string errMsg);

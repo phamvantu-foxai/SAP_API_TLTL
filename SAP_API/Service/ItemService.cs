@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SAP_API.Data;
 using SAP_API.Model;
+using SAPbobsCOM;
 using SAPbouiCOM;
 using Serilog;
 using System.Net;
@@ -11,6 +12,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
+using Message = SAP_API.Model.Message;
 
 namespace SAP_API.Service
 {
@@ -30,6 +32,28 @@ namespace SAP_API.Service
             _apiAPIEcomaint = apiAPIEcomaint.Value;
             _api = api.Value;
             _db = db;
+        }
+        public async Task<(Message, List<ItemOnhand>)> GetItemOnhandByLocationAsync(List<string> itemCodes)
+        {
+            Message message = new Message();
+            try
+            {
+                var query = _db.Set<ItemOnhand>().AsQueryable();
+
+                if (itemCodes != null && itemCodes.Any())
+                {
+                    query = query.Where(e => itemCodes.Contains(e.ItemCode));
+                }
+
+                return (null, await query.ToListAsync());
+            }
+            catch (Exception ex)
+            {
+                message.Status = 400;
+                message.Error = ex.Message;
+                return (message, null);
+            }
+            
         }
         static void WriteLog(string message)
         {
