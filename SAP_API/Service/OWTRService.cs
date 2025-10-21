@@ -415,7 +415,7 @@ namespace SAP_API.Service
                 var ocrd = _db.OCRDView
                    .AsNoTracking()
                    .ApplyFiltering(query);
-
+                   
                 var total = await ocrd.CountAsync();
                 var doc = await ocrd.ApplyOrdering(query).ApplyPaging(query).ToListAsync();
                 return (null, doc, total);

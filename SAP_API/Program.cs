@@ -41,6 +41,7 @@ builder.Services.Configure<APIEcomaint>(
     builder.Configuration.GetSection("APIEcomaint"));
 builder.Services.AddScoped<OWTRService>();
 builder.Services.AddScoped<ItemService>();
+builder.Services.AddScoped<OrderService>();
 builder.Services.AddSingleton<SapDiApiHelper>();
 
 builder.Services.AddScoped<SapInvoiceService>();

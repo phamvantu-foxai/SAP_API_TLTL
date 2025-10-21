@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Gridify;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -11,6 +12,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using ItemInfo = SAP_API.Model.ItemInfo;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 using Message = SAP_API.Model.Message;
 
@@ -54,6 +57,33 @@ namespace SAP_API.Service
                 return (message, null);
             }
             
+        }
+        public async Task<(Message, List<ItemInfo>, int)> GetItemInforAsync(GridifyQuery q,List<string> itemCodes)
+        {
+            Message message = new Message();
+            try
+            {
+                var query = _db.ItemInfo
+                   .AsNoTracking()
+                   .ApplyFiltering(q);
+                if (itemCodes != null && itemCodes.Any())
+                {
+                    query = query.Where(e => itemCodes.Contains(e.ItemCode));
+                }
+                var total = await query.CountAsync();
+                var doc = await query.ApplyOrdering(q).ApplyPaging(q).ToListAsync();
+
+                
+
+                return (null, doc, total);
+            }
+            catch (Exception ex)
+            {
+                message.Status = 400;
+                message.Error = ex.Message;
+                return (message, null,0);
+            }
+
         }
         static void WriteLog(string message)
         {

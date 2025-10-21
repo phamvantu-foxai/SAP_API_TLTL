@@ -52,5 +52,23 @@ namespace SAP_API.Controllers
 
             return Ok(result);
         }
+        [Authorize]
+        [HttpGet()]
+        public async Task<IActionResult> GetItemInfor([FromQuery] GridifyQuery q,[FromQuery] string? ItemCode)
+        {
+            List<string> items = new List<string>();
+            if (! string.IsNullOrWhiteSpace(ItemCode))
+                items = ItemCode
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
+
+
+            var (mess, data, total) = await _sapService.GetItemInforAsync(q, items);
+            if (mess != null)
+            {
+                return BadRequest(mess);
+            }
+            return Ok(new { data , total});
+        }
     }
 }
