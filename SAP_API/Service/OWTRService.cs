@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Gridify;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -7,9 +8,13 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SAP_API.Data;
 using SAP_API.Model;
+using SAPbouiCOM;
 using System.Data;
+using System.Data.Common;
 using System.Net;
 using System.Text.Json;
+using System.Threading.Channels;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace SAP_API.Service
 {
@@ -17,11 +22,15 @@ namespace SAP_API.Service
     {
         private readonly Cookies cookies = new Cookies();
         private readonly SapSessionManager _sessionManager;
+        private readonly SAPConnection _sapConnection;
         private readonly APISetting _api;
-        public OWTRService(SapSessionManager sessionManager, IOptions<APISetting> api)
+        private readonly AppDbContext _db;
+        public OWTRService(SapSessionManager sessionManager, IOptions<APISetting> api ,AppDbContext db, SAPConnection sapConnection)
         {
             _sessionManager = sessionManager;
-            _api = api.Value; 
+            _api = api.Value;
+            _db = db;
+            _sapConnection = sapConnection;
         }
         public async Task<(Message,List<OWTR>)> GetOwtrAsync(string? DocNumber, string store)
         {
@@ -29,8 +38,8 @@ namespace SAP_API.Service
             List<OWTR> owtrs = new List<OWTR>();
             try
             {
-                if (cookies == null || cookies.SessionTime < DateTime.Now)
-                {
+                //if (cookies == null || cookies.SessionTime < DateTime.Now)
+                //{
                     var (ckies, check, Mes) = await _sessionManager.LoginAsync();
                     if (check)
                     {
@@ -38,7 +47,7 @@ namespace SAP_API.Service
                         cookies.B1SESSION = ckies.B1SESSION;
                         cookies.ROUTEID = ckies.ROUTEID;
                     }
-                }
+                //}
                 string whsCode = store;
                 HttpWebRequest _httpWebRequests;
                 if(DocNumber.IsNullOrEmpty())
@@ -159,14 +168,86 @@ namespace SAP_API.Service
             }
             
         }
+        public async Task<(Message, List<OWTR>)> GetOwtrDIAPIAsync(string? DocNumber, string store)
+        {
+            Message message = new Message();
+            List<OWTR> owtrs = new List<OWTR>();
+            try
+            {
+                if(DocNumber.IsNullOrEmpty())
+                {
+                    var flatList = await _db.OWTRView.Where(e => e.warehouseSapCode == store).ToListAsync();
+                    owtrs = flatList.GroupBy(r => r.DocEntry)
+                    .Select(g => new OWTR
+                    {
+                        WarehouseSapCode = g.First().warehouseSapCode,
+                        DocEntry = g.First().Docnumber,
+                        DocDate = g.First().DocDate,
+                        Note = g.First().note,
+                        ItemDetail = g.GroupBy(i => (string)i.itemCode)
+                                      .Select(iGroup => new WTR1
+                                      {
+                                          ItemCode = iGroup.Key,
+                                          ItemName = iGroup.First().itemName,
+                                          Quantity = (double)iGroup.First().quantity,
+                                          Batch = iGroup
+                                              .Where(b => b.BatchNum != null)
+                                              .Select(b => new Batch
+                                              {
+                                                  BatchNumber = b.BatchNum,
+                                                  Quantity = (double)b.QtyBatch,
+                                                  expDate = (DateTime?)b.ExpDate,
+                                                  mnfDate = (DateTime?)b.MnfDate
+                                              }).ToList()
+                                      }).ToList()
+                    }).ToList();
+                    return (null, owtrs);
+                }
+                else
+                {
+                    var flatList = await _db.OWTRView.Where(e => e.warehouseSapCode == store && e.Docnumber == DocNumber).ToListAsync();
+                    owtrs = flatList.GroupBy(r => r.DocEntry)
+                    .Select(g => new OWTR
+                    {
+                        WarehouseSapCode = g.First().warehouseSapCode,
+                        DocEntry = g.First().Docnumber,
+                        DocDate = g.First().DocDate,
+                        Note = g.First().note,
+                        ItemDetail = g.GroupBy(i => (string)i.itemCode)
+                                      .Select(iGroup => new WTR1
+                                      {
+                                          ItemCode = iGroup.Key,
+                                          ItemName = iGroup.First().itemName,
+                                          Quantity = (double)iGroup.First().quantity,
+                                          Batch = iGroup
+                                              .Where(b => b.BatchNum != null)
+                                              .Select(b => new Batch
+                                              {
+                                                  BatchNumber = b.BatchNum,
+                                                  Quantity = (double)b.QtyBatch,
+                                                  expDate = (DateTime?)b.ExpDate,
+                                                  mnfDate = (DateTime?)b.MnfDate
+                                              }).ToList()
+                                      }).ToList()
+                    }).ToList();
+                    return (null, owtrs);
+                }
+            }
+            catch (Exception ex)
+            {
+                message.Status = 400;
+                message.Error = ex.Message;
+                return (message, null);
+            }
 
+        }
         public async Task<Message> UpdateOwtr(string DocNumber, string store, string DocNumPos)
         {
             Message message = new Message();
             try
             {
-                if (cookies == null || cookies.SessionTime < DateTime.Now)
-                {
+                //if (cookies == null || cookies.SessionTime < DateTime.Now)
+                //{
                     var (ckies, check, Mes) = await _sessionManager.LoginAsync();
                     if (check)
                     {
@@ -174,7 +255,7 @@ namespace SAP_API.Service
                         cookies.B1SESSION = ckies.B1SESSION;
                         cookies.ROUTEID = ckies.ROUTEID;
                     }
-                }
+                //}
                 string whsCode = "";
                 //if (store == "CSQO")
                 //{
@@ -303,6 +384,50 @@ namespace SAP_API.Service
                 message.Status = 400;
                 return message;
             }
+        }
+
+
+
+        public async Task<Message> UpdateOwtrDIAPI(string DocNumber, string store, string DocNumPos)
+        {
+            Message message = new Message();
+            try
+            {
+                await _db.Database.ExecuteSqlRawAsync(
+                    "UPDATE OWTR SET U_POS = @POS WHERE DocEntry = @DocNumbers",
+                    new { POS = DocNumPos, DocNumbers = DocNumber }
+                );
+                return null;
+            }
+            catch (Exception ex)
+            {
+                message.Error = ex.Message;
+                message.Status = 400;
+                return message;
+            }
+        }
+
+        public async Task<(Message, List<OCRDView>, int)> GetOCRDAsync(GridifyQuery query)
+        {
+            Message message = new Message();
+            try
+            {
+                var ocrd = _db.OCRDView
+                   .AsNoTracking()
+                   .ApplyFiltering(query);
+                   
+                var total = await ocrd.CountAsync();
+                var doc = await ocrd.ApplyOrdering(query).ApplyPaging(query).ToListAsync();
+                return (null, doc, total);
+                    
+            }
+            catch (Exception ex)
+            {
+                message.Status = 400;
+                message.Error = ex.Message;
+                return (message, null,0);
+            }
+
         }
     }
 }

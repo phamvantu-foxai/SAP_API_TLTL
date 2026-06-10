@@ -17,7 +17,11 @@ namespace SAP_API.Model
 
         public List<InvoiceLineDto> ARInvoice_Lines { get; set; } = new();
     }
-
+    public class CancelARInvoice
+    {
+        public string InvoiceCode { get; set; }
+        public string OriginalInvoiceCode { get; set; }
+    }
     public class InvoiceLineDto
     {
         public string ItemCode { get; set; }          // Mã hàng

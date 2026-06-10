@@ -23,22 +23,8 @@ namespace SAP_API.Controllers
         public async Task<IActionResult> addARCreditMemo(ARInvoice ar)
         {
 
-            var mess = await _sapService.CreateCreditInvoiceWithPaymentAsync(ar);
+            var mess = await _sapService.CreateCreditInvoiceDIAPIWithPaymentAsync(ar);
             return Ok(mess);
-        }
-        [HttpGet("check")]
-        [AllowAnonymous]
-        public async Task<IActionResult> addARCreditMemo1(string invoice)
-        {
-            var a =  _sapService.GetDocEntryARInvoiceAsync(invoice);
-            return Ok();
-        }
-        [HttpGet("checkInvoice")]
-        [AllowAnonymous]
-        public async Task<IActionResult> addARCreditInvoice()
-        {
-            var a = _sapService.GetARInvoiceAsync(36277);
-            return Ok();
         }
     }
 }
