@@ -13,6 +13,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 using ItemInfo = SAP_API.Model.ItemInfo;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 using Message = SAP_API.Model.Message;
@@ -172,9 +173,9 @@ namespace SAP_API.Service
                     }
                     ls = new List<TransferView>();
                 }
-            }catch
+            }catch(Exception ex)
             {
-
+                WriteLog(ex.Message);
             }
             return true;
         }
@@ -205,9 +206,9 @@ namespace SAP_API.Service
                     ls = new List<GoodIssueView>();
                 }
             }
-            catch
+            catch (Exception ex)
             {
-
+                WriteLog(ex.Message);
             }
             return true;
         }
@@ -238,9 +239,9 @@ namespace SAP_API.Service
                     ls = new List<GoodReceiptView>();
                 }
             }
-            catch
+            catch (Exception ex)
             {
-
+                WriteLog(ex.Message);
             }
             return true;
         }
