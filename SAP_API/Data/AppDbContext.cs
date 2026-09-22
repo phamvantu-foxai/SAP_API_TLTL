@@ -13,6 +13,7 @@ namespace SAP_API.Data
         public DbSet<OWTRView> OWTRView { get; set; }
         public DbSet<OCRDView> OCRDView { get; set; }
         public DbSet<ItemOnhand> ItemOnhand { get; set; }
+        public DbSet<ItemOnhandEco> ItemOnhandEco { get; set; }
         public DbSet<ItemInfo> ItemInfo { get; set; }
         public DbSet<OrderView> OrderView { get; set; }
         public DbSet<AgreementDetails> AgreementDetails { get; set; }
@@ -31,6 +32,7 @@ namespace SAP_API.Data
             modelBuilder.Entity<OWTRView>().HasNoKey().ToView("uv_OWTR");
             modelBuilder.Entity<OCRDView>().HasNoKey().ToView("uv_OCRD");
             modelBuilder.Entity<ItemOnhand>().HasNoKey().ToView("uv_OITW");
+            modelBuilder.Entity<ItemOnhandEco>().HasNoKey().ToView("uv_Ecomain_Item");
             modelBuilder.Entity<ItemInfo>().HasNoKey().ToView("uv_OITM");
             modelBuilder.Entity<OrderView>().HasNoKey().ToView("uv_Order_Closed");
             modelBuilder.Entity<AgreementDetails>().HasNoKey().ToView("uv_BlanketAgrement");

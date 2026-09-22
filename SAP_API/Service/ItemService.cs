@@ -59,6 +59,32 @@ namespace SAP_API.Service
             }
             
         }
+        public async Task<(Message, List<ItemOnhandEco>, int)> GetItemOnhandByLocationEcoAsync(GridifyQuery q, List<string>? itemCodes)
+        {
+            Message message = new Message();
+            try
+            {
+                var query = _db.Set<ItemOnhandEco>().AsQueryable();
+
+                if (itemCodes != null && itemCodes.Any())
+                {
+                    query = query.Where(e => itemCodes.Contains(e.ItemCode));
+                }
+                var total = await query.CountAsync();
+                var doc = await query.ApplyOrdering(q).ApplyPaging(q).ToListAsync();
+
+
+
+                return (null, doc, total);
+            }
+            catch (Exception ex)
+            {
+                message.Status = 400;
+                message.Error = ex.Message;
+                return (message, null,0);
+            }
+
+        }
         public async Task<(Message, List<ItemInfo>, int)> GetItemInforAsync(GridifyQuery q,List<string> itemCodes)
         {
             Message message = new Message();

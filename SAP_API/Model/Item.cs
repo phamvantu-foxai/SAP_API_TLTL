@@ -146,6 +146,26 @@ namespace SAP_API.Model
         public decimal? OnOrder { get; set; }
         public decimal? Available { get; set; }
     }
+    public class ItemOnhandEco
+    {
+        public string ItemCode { get; set; }
+        public string ItemName { get; set; }
+        public string Warehouse { get; set; }
+
+        public decimal? OnHand { get; set; }
+        public decimal? OnOrder { get; set; }
+    }
+    public class ItemViewEco
+    {
+        public string ItemCode { get; set; }
+        public ICollection<OITWEco> OITW { get; set; }
+    }
+    public class OITWEco
+    {
+        public string Warehouse { get; set; }
+        public decimal? OnHand { get; set; }
+        public decimal? OnOrder { get; set; }
+    }
     public class ItemView
     {
         public string ItemCode { get; set; }

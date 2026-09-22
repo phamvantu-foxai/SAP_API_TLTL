@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Gridify;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SAP_API.Model;
 using SAP_API.Service;
 
 namespace SAP_API.Controllers
@@ -48,6 +50,25 @@ namespace SAP_API.Controllers
             await _oitmService.GetGoodReceipt();
             return Ok();
         }
-        
+        [AllowAnonymous]
+        [HttpGet("available")]
+        public async Task<IActionResult> GetAvailable([FromQuery] GridifyQuery q, [FromQuery] string? ItemCode)
+        {
+            List<string> itemCodes = new List<string>() ;
+            if (!string.IsNullOrWhiteSpace(ItemCode))
+                itemCodes  = ItemCode
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
+
+
+            var (mess, data, total) = await _oitmService.GetItemOnhandByLocationEcoAsync(q,itemCodes);
+            if (mess != null)
+            {
+                return BadRequest(mess);
+            }
+
+
+            return Ok(new { data, total });
+        }
     }
 }
